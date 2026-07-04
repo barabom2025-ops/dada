@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 라면 타이머 (Smart Ramen Timer)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Poppins', sans-serif;
+            background-color: #fcf8f2;
+        }
+        .timer-glow {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+        }
+        .step-active {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-gray-800">
+
+    <!-- Header & Language Selector -->
+    <header class="bg-white border-b border-orange-100 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-red-500 text-white p-2 rounded-xl shadow-md">
+                    <i class="fa-solid fa-bowl-hot text-xl animate-bounce"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black text-red-600 tracking-tight" id="header-title">스마트 라면 마스터</h1>
+                    <p class="text-xs text-gray-500" id="header-subtitle">나만의 최적 레시피 메이트</p>
+                </div>
+            </div>
+            
+            <!-- Language Selector -->
+            <div class="flex items-center space-x-2 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100">
+                <i class="fa-solid fa-earth-americas text-orange-500"></i>
+                <select id="lang-select" class="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer">
+                    <option value="ko">한국어 (Korean)</option>
+                    <option value="en">English</option>
+                    <option value="ja">日本語 (Japanese)</option>
+                    <option value="zh">中文 (Chinese)</option>
+                    <option value="es">Español (Spanish)</option>
+                    <option value="de">Deutsch (German)</option>
+                    <option value="vi">Tiếng Việt (Vietnamese)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Selection & Configuration (5 cols) -->
+        <section class="lg:col-span-5 space-y-6">
+            
+            <!-- 1. Ramen Selection -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-50">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="text-red-500">1.</span>
+                    <span id="lbl-ramen-select">라면 종류 선택</span>
+                </h2>
+                <div class="grid grid-cols-2 gap-3" id="ramen-grid">
+                    <!-- Dynamic insertion via JS -->
+                </div>
+            </div>
+
+            <!-- 2. Heat Source & Water -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-50">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="text-red-500">2.</span>
+                    <span id="lbl-stove-select">가열 기구 선택</span>
+                </h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="setStove('gas')" id="btn-stove-gas" class="flex flex-col items-center justify-center p-4 border-2 border-orange-100 rounded-xl hover:border-red-500 hover:bg-red-50/20 transition-all group">
+                        <i class="fa-solid fa-fire text-3xl text-gray-400 group-hover:text-red-500 mb-2 transition-colors"></i>
+                        <span class="font-semibold text-sm" id="lbl-gas">가스레인지</span>
+                        <span class="text-xs text-gray-400 mt-1" id="lbl-gas-desc">(평균 4분 소요)</span>
+                    </button>
+                    <button onclick="setStove('induction')" id="btn-stove-induction" class="flex flex-col items-center justify-center p-4 border-2 border-orange-100 rounded-xl hover:border-red-500 hover:bg-red-50/20 transition-all group">
+                        <i class="fa-solid fa-bolt text-3xl text-gray-400 group-hover:text-blue-500 mb-2 transition-colors"></i>
+                        <span class="font-semibold text-sm" id="lbl-induction">인덕션</span>
+                        <span class="text-xs text-gray-400 mt-1" id="lbl-induction-desc">(평균 2분 30초 소요)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Toppings Config -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-50">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="text-red-500">3.</span>
+                    <span id="lbl-toppings">토ppings 추가</span>
+                </h2>
+                <div class="space-y-3">
+                    <!-- Rice cake -->
+                    <label class="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:bg-orange-50/50 cursor-pointer transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">🍡</span>
+                            <span class="font-medium text-sm" id="lbl-topping-ricecake">떡국떡 (조리 시 면과 함께)</span>
+                        </div>
+                        <input type="checkbox" id="top-ricecake" onchange="updateToppings()" class="w-5 h-5 text-red-500 focus:ring-red-400 border-gray-300 rounded">
+                    </label>
+
+                    <!-- Green onion -->
+                    <label class="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:bg-orange-50/50 cursor-pointer transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">🌱</span>
+                            <span class="font-medium text-sm" id="lbl-topping-greenonion">파 (마지막 1분 전 추가)</span>
+                        </div>
+                        <input type="checkbox" id="top-greenonion" onchange="updateToppings()" class="w-5 h-5 text-red-500 focus:ring-red-400 border-gray-300 rounded">
+                    </label>
+
+                    <!-- Cheese -->
+                    <label class="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:bg-orange-50/50 cursor-pointer transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">🧀</span>
+                            <span class="font-medium text-sm" id="lbl-topping-cheese">치즈 (완료 직전 토핑)</span>
+                        </div>
+                        <input type="checkbox" id="top-cheese" onchange="updateToppings()" class="w-5 h-5 text-red-500 focus:ring-red-400 border-gray-300 rounded">
+                    </label>
+
+                    <!-- Egg Option Box -->
+                    <div class="border border-gray-100 rounded-xl p-3 space-y-3">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🥚</span>
+                                <span class="font-medium text-sm" id="lbl-topping-egg">계란 추가</span>
+                            </div>
+                            <input type="checkbox" id="top-egg" onchange="toggleEggOption()" class="w-5 h-5 text-red-500 focus:ring-red-400 border-gray-300 rounded">
+                        </label>
+                        
+                        <div id="egg-option-panel" class="hidden pl-8 pt-2 border-t border-dashed border-gray-100 flex items-center gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="egg-style" value="soft" checked onchange="updateEggStyle()" class="text-red-500 focus:ring-red-400">
+                                <span class="text-xs font-semibold" id="lbl-egg-soft">반숙 (부드럽게, 마지막 1분 30초)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="egg-style" value="hard" onchange="updateEggStyle()" class="text-red-500 focus:ring-red-400">
+                                <span class="text-xs font-semibold" id="lbl-egg-hard">완숙 (단단하게, 마지막 3분)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Timer, Steps, Controls & Output (7 cols) -->
+        <section class="lg:col-span-7 space-y-6 flex flex-col justify-between">
+            
+            <!-- Real-time Active Recipe Status Panel -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-orange-100 timer-glow flex-grow flex flex-col justify-between">
+                
+                <!-- Recipe Specs Header -->
+                <div class="border-b border-gray-100 pb-4 flex justify-between items-start">
+                    <div>
+                        <span class="inline-block px-3 py-1 text-xs font-extrabold text-red-600 bg-red-50 rounded-full mb-1" id="badge-ramen-name">신라면</span>
+                        <h3 class="text-xl font-bold text-gray-900" id="recipe-title">신라면 완벽 클래식 레시피</h3>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400" id="lbl-water-amount-title">권장 물 용량</p>
+                        <p class="text-lg font-black text-blue-600" id="water-volume">550 ml</p>
+                    </div>
+                </div>
+
+                <!-- Interactive Cooking Steps Progress Map -->
+                <div class="my-6 grid grid-cols-4 gap-2 text-center" id="steps-progress-bar">
+                    <div id="step-node-0" class="p-2 border border-gray-200 rounded-lg text-xs font-bold transition-all">
+                        <div class="mb-1 text-base">🚰</div>
+                        <span id="lbl-step-node-0">물 끓이기</span>
+                    </div>
+                    <div id="step-node-1" class="p-2 border border-gray-200 rounded-lg text-xs font-bold transition-all">
+                        <div class="mb-1 text-base">🍜</div>
+                        <span id="lbl-step-node-1">면&amp;스프</span>
+                    </div>
+                    <div id="step-node-2" class="p-2 border border-gray-200 rounded-lg text-xs font-bold transition-all">
+                        <div class="mb-1 text-base">🥚</div>
+                        <span id="lbl-step-node-2">토핑 조리</span>
+                    </div>
+                    <div id="step-node-3" class="p-2 border border-gray-200 rounded-lg text-xs font-bold transition-all">
+                        <div class="mb-1 text-base">✨</div>
+                        <span id="lbl-step-node-3">맛있게 시식</span>
+                    </div>
+                </div>
+
+                <!-- Large Digital Clock Design -->
+                <div class="bg-gradient-to-br from-red-50 to-orange-50/50 rounded-3xl p-8 text-center border border-red-100/50 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-white opacity-20 pointer-events-none"></div>
+                    <p class="text-xs uppercase tracking-widest text-red-500 font-bold mb-1" id="timer-step-label">현재 단계</p>
+                    <h4 class="text-lg font-extrabold text-gray-900 mb-4" id="timer-step-name">대기 중 - 라면을 선택하세요</h4>
+                    
+                    <!-- Digital Clock Face -->
+                    <div class="text-6xl md:text-7xl font-mono font-black text-gray-900 tracking-wider flex justify-center items-center select-none" id="clock-display">
+                        00:00
+                    </div>
+
+                    <!-- Visual Instruction Toast -->
+                    <p class="mt-4 text-sm font-semibold text-gray-600 px-4 py-2 bg-white/80 rounded-full inline-block shadow-sm" id="step-action-desc">
+                        라면 종류와 옵션을 정한 후 아래 시작 버튼을 눌러주세요.
+                    </p>
+                </div>
+
+                <!-- Interactive Main Action Control Panel -->
+                <div class="mt-6 flex flex-col space-y-3">
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="startTimer()" id="btn-start" class="py-4 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-extrabold rounded-2xl shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-play"></i> <span id="lbl-btn-start">시작</span>
+                        </button>
+                        <button onclick="pauseTimer()" id="btn-pause" class="py-4 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-pause"></i> <span id="lbl-btn-pause">일시정지</span>
+                        </button>
+                        <button onclick="resetTimer()" id="btn-reset" class="py-4 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> <span id="lbl-btn-reset">초기화</span>
+                        </button>
+                    </div>
+
+                    <!-- Next Step Button (Visible during all states to skip or proceed manually) -->
+                    <button onclick="nextStep()" id="btn-next" class="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all">
+                        <span id="lbl-btn-next">다음 단계로 넘어가기</span> <i class="fa-solid fa-angles-right"></i>
+                    </button>
+                </div>
+
+                <!-- TTS Audio Sound Controller Status -->
+                <div class="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <div class="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                        <i class="fa-solid fa-volume-high text-orange-500"></i>
+                        <span id="lbl-tts-status">음성 안내가 켜져 있습니다.</span>
+                    </div>
+                    <button onclick="toggleAudio()" id="btn-audio-mute" class="text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-lg font-bold hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-volume-xmark text-red-500"></i>
+                        <span id="lbl-audio-btn">음량 끄기</span>
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Developer Brand Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-6 border-t border-gray-800 mt-12">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+            <div>
+                <p class="text-xs text-gray-500">Professional Cooking Companion Algorithm System</p>
+                <p class="text-sm font-bold text-white mt-1">Smart Ramen Master Pro</p>
+            </div>
+            <div class="bg-gray-800/80 px-4 py-2.5 rounded-xl border border-gray-700/50 flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <div class="text-xs">
+                    <span class="text-gray-500 mr-1" id="lbl-dev-title">개발자:</span>
+                    <span class="text-white font-extrabold text-sm">가치있는미래교육연구소 대표 김병찬</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Audio Alarms -->
+    <audio id="alarm-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav" preload="auto"></audio>
+
+    <!-- JavaScript System Core Logic -->
+    <script>
+        // Dictionary for multi-language translation and localization
+        const translations = {
+            ko: {
+                title: "스마트 라면 마스터",
+                subtitle: "나만의 최적 레시피 메이트",
+                ramenSelect: "1. 라면 종류 선택",
+                stoveSelect: "2. 가열 기구 선택",
+                toppings: "3. 토핑 추가",
+                gas: "가스레인지",
+                gasDesc: "(평균 4분 소요)",
+                induction: "인덕션",
+                inductionDesc: "(평균 2분 30초 소요)",
+                ricecake: "떡국떡 (조리 시 면과 함께)",
+                greenonion: "파 (마지막 1분 전 추가)",
+                cheese: "치즈 (완료 직전 토핑)",
+                egg: "계란 추가",
+                eggSoft: "반숙 (부드럽게, 마지막 1분 30초)",
+                eggHard: "완숙 (단단하게, 마지막 3분)",
+                waterTitle: "권장 물 용량",
+                stepNode0: "물 끓이기",
+                stepNode1: "면&스프",
+                stepNode2: "토핑 조리",
+                stepNode3: "완성!",
+                start: "시작",
+                pause: "일시정지",
+                reset: "초기화",
+                next: "다음 단계로 넘어가기",
+                ttsOn: "음성 안내가 활성화되었습니다.",
+                ttsOff: "음성 안내가 비활성화되었습니다.",
+                muteBtn: "음소거",
+                unmuteBtn: "소리 켜기",
+                devTitle: "개발자",
+                devName: "가치있는미래교육연구소 대표 김병찬",
+                waiting: "대기 중 - 라면을 선택하세요",
+                initialDesc: "라면 종류와 옵션을 정한 후 아래 시작 버튼을 눌러주세요.",
+                stepLabel: "현재 단계",
+                
+                // Recipe Names
+                shin: "신라면",
+                jin: "진라면",
+                neoguri: "너구리",
+                buldak: "불닭볶음면",
+                짜짜로니: "짜파게티",
+                
+                // Instructions / TTS Prompts
+                ttsBoilStart: "조리를 시작합니다. 가열 기구에 물을 올리고 끓기 시작할 때까지 잠시 대기해 주세요.",
+                ttsNoodleTime: "물이 팔팔 끓고 있습니다! 면과 스프를 넣어주세요. 조심하세요, 뜨겁습니다!",
+                ttsToppingTime: "이제 준비한 토핑을 추가할 시간입니다. 조심히 냄비에 넣어주세요.",
+                ttsEggTime: "계란을 넣을 타이밍입니다. 조심스레 넣어 휘젓지 말고 익혀보세요.",
+                ttsDone: "라면 조리가 모두 완료되었습니다! 기구를 끄고 맛있게 드세요!",
+                ttsNextReady: "다음 단계를 시작할 준비가 되었습니다. 시작 버튼을 누르면 타이머가 다시 시작됩니다."
+            },
+            en: {
+                title: "Smart Ramen Master",
+                subtitle: "Your Ultimate Ramen Recipe Companion",
+                ramenSelect: "1. Select Ramen Type",
+                stoveSelect: "2. Select Stove Type",
+                toppings: "3. Customize Toppings",
+                gas: "Gas Stove",
+                gasDesc: "(Avg. 4 mins)",
+                induction: "Induction",
+                inductionDesc: "(Avg. 2.5 mins)",
+                ricecake: "Rice Cake (Cook with noodles)",
+                greenonion: "Green Onion (Add in last 1 min)",
+                cheese: "Cheese (Topping at the end)",
+                egg: "Add Egg",
+                eggSoft: "Soft-boiled (Last 1.5 mins)",
+                eggHard: "Hard-boiled (Last 3 mins)",
+                waterTitle: "Recommended Water",
+                stepNode0: "Boil Water",
+                stepNode1: "Noodles & Soup",
+                stepNode2: "Add Toppings",
+                stepNode3: "Serve & Enjoy",
+                start: "Start",
+                pause: "Pause",
+                reset: "Reset",
+                next: "Proceed to Next Step",
+                ttsOn: "Voice guidance is enabled.",
+                ttsOff: "Voice guidance is disabled.",
+                muteBtn: "Mute",
+                unmuteBtn: "Unmute",
+                devTitle: "Developer",
+                devName: "Kim Byung-chan, Representative of Valuable Future Education Research Institute",
+                waiting: "Waiting - Select Ramen",
+                initialDesc: "Configure your recipe options, then click the Start button below.",
+                stepLabel: "Current Stage",
+                
+                shin: "Shin Ramyun",
+                jin: "Jin Ramyun",
+                neoguri: "Neoguri",
+                buldak: "Buldak Spicy Chicken",
+                짜짜로니: "Chapagetti",
+                
+                ttsBoilStart: "Starting the cooking sequence. Please put the pot on the stove and wait until the water boils.",
+                ttsNoodleTime: "The water is boiling hot! Please add the noodles and soup powder safely.",
+                ttsToppingTime: "Time to add your chosen toppings now. Carefully put them into the pot.",
+                ttsEggTime: "Please add the egg now. Put it in gently to cook beautifully.",
+                ttsDone: "Ramen cooking is complete! Turn off the stove and enjoy your perfect meal!",
+                ttsNextReady: "Ready for the next step. Press the Start button to resume the timer."
+            },
+            ja: {
+                title: "スマートラーメンマスター",
+                subtitle: "最高のラーメンクッキング助手",
+                ramenSelect: "1. ラーメンの種類を選択",
+                stoveSelect: "2. 調理器具の選択",
+                toppings: "3. トッピングの追加",
+                gas: "ガスコンロ",
+                gasDesc: "(平均4分必要)",
+                induction: "IHクッキングヒーター",
+                inductionDesc: "(平均2分30秒必要)",
+                ricecake: "トックの餅 (麺と同時に調理)",
+                greenonion: "ネギ (残り1分前に追加)",
+                cheese: "チーズ (最後の仕上げ)",
+                egg: "卵の追加",
+                eggSoft: "半熟 (最後の1分30秒)",
+                eggHard: "固茹で (最後の3分)",
+                waterTitle: "推奨水量",
+                stepNode0: "お湯を沸かす",
+                stepNode1: "麺＆スープ",
+                stepNode2: "トッピング調理",
+                stepNode3: "出来上がり!",
+                start: "スタート",
+                pause: "一時停止",
+                reset: "リセット",
+                next: "次の段階へ進む",
+                ttsOn: "音声案内が有効です。",
+                ttsOff: "音声案内が無効です。",
+                muteBtn: "消音",
+                unmuteBtn: "音声ON",
+                devTitle: "開発者",
+                devName: "価値ある未来教育研究所 代表 金炳燦(キム・ビョンチャン)",
+                waiting: "待機中 - ラーメンを選択してください",
+                initialDesc: "お好みのオプションを選択してから、下のスタートボタンを押してください。",
+                stepLabel: "現在のステップ",
+                
+                shin: "辛ラーメン",
+                jin: "ジンラーメン",
+                neoguri: "ノグリ",
+                buldak: "プルダックポックンミョン",
+                짜짜로니: "チャパゲティ",
+                
+                ttsBoilStart: "調理を開始します。お湯を沸かし、沸騰するまでしばらくお待ちください。",
+                ttsNoodleTime: "お湯が沸騰しました！麺と粉末スープを入れてください。火傷にご注意ください。",
+                ttsToppingTime: "準備したトッピングを追加する時間です。慎重に鍋に入れてください。",
+                ttsEggTime: "卵を入れるタイミングです。そっと落として崩さないように煮込みます。",
+                ttsDone: "美味しいラーメンが完成しました！火を止めて温かいうちに召し上がってください！",
+                ttsNextReady: "次の段階の準備が整いました。スタートボタンを押すとタイマーが再開します。"
+            },
+            zh: {
+                title: "智能拉面助手",
+                subtitle: "专属您的完美黄金比例食谱",
+                ramenSelect: "1. 选择拉面种类",
+                stoveSelect: "2. 选择加热方式",
+                toppings: "3. 自定义添加配料",
+                gas: "燃气灶",
+                gasDesc: "(平均需4分钟)",
+                induction: "电磁炉",
+                inductionDesc: "(平均需2.5分钟)",
+                ricecake: "年糕片 (与面饼一同下锅)",
+                greenonion: "葱花 (最后一分钟时加入)",
+                cheese: "奶酪片 (出锅前覆盖)",
+                egg: "加鸡蛋",
+                eggSoft: "溏心蛋 (最后1分30秒)",
+                eggHard: "全熟蛋 (最后3分钟)",
+                waterTitle: "推荐水量",
+                stepNode0: "烧开水",
+                stepNode1: "面饼与调料",
+                stepNode2: "添加配料",
+                stepNode3: "大功告成",
+                start: "开始",
+                pause: "暂停",
+                reset: "重置",
+                next: "跳过到下一步",
+                ttsOn: "语音播报功能已开启。",
+                ttsOff: "语音播报功能已禁用。",
+                muteBtn: "静音",
+                unmuteBtn: "开启声音",
+                devTitle: "开发者",
+                devName: "有价值的未来教育研究所 代表 金炳灿",
+                waiting: "等待选择 - 请先点选拉面",
+                initialDesc: "选定你喜欢的拉面和配料后，点击下方的“开始”按钮进行烹饪。",
+                stepLabel: "当前烹饪状态",
+                
+                shin: "辛拉面",
+                jin: "真拉面",
+                neoguri: "农心乌龙面",
+                buldak: "火鸡面",
+                짜짜로니: "炸酱面",
+                
+                ttsBoilStart: "烹饪程序已启动。请加水点火，静待水烧开。",
+                ttsNoodleTime: "水已经烧开了！请小心地放入面饼和调料包，谨防烫伤。",
+                ttsToppingTime: "现在到了添加配料的时间，请倒入准备好的美味配料。",
+                ttsEggTime: "可以卧入鸡蛋了，轻轻放入，使其自然凝固更美味。",
+                ttsDone: "拉面已经全部煮好啦！请关闭火源，尽情享受美味吧！",
+                ttsNextReady: "已进入下一烹饪阶段。点击“开始”恢复计时。"
+            },
+            es: {
+                title: "Asistente Inteligente de Ramen",
+                subtitle: "Su Compañero de Recetas Definitivo",
+                ramenSelect: "1. Elija el tipo de Ramen",
+                stoveSelect: "2. Tipo de Cocina",
+                toppings: "3. Añadir Ingredientes Extra",
+                gas: "Estufa de Gas",
+                gasDesc: "(Promedio 4 min)",
+                induction: "Cocina de Inducción",
+                inductionDesc: "(Promedio 2.5 min)",
+                ricecake: "Pastel de Arroz (Cocinar con fideos)",
+                greenonion: "Cebollino (Añadir en el último minuto)",
+                cheese: "Queso (Derretir al final)",
+                egg: "Añadir Huevo",
+                eggSoft: "Poco cocido (Últimos 1.5 min)",
+                eggHard: "Bien cocido (Últimos 3 min)",
+                waterTitle: "Agua Recomendada",
+                stepNode0: "Hervir Agua",
+                stepNode1: "Fideos y Sopa",
+                stepNode2: "Ingredientes",
+                stepNode3: "¡Listo para Comer!",
+                start: "Comenzar",
+                pause: "Pausa",
+                reset: "Reiniciar",
+                next: "Pasar al siguiente paso",
+                ttsOn: "Guía de voz activada.",
+                ttsOff: "Guía de voz desactivada.",
+                muteBtn: "Silenciar",
+                unmuteBtn: "Sonido",
+                devTitle: "Desarrollador",
+                devName: "Kim Byung-chan, Representante del Instituto de Investigación Educativa del Futuro Valioso",
+                waiting: "Esperando - Seleccione Ramen",
+                initialDesc: "Configure el ramen y los ingredientes adicionales, luego pulse Comenzar.",
+                stepLabel: "Etapa Actual",
+                
+                shin: "Shin Ramen",
+                jin: "Jin Ramen",
+                neoguri: "Neoguri Ramen",
+                buldak: "Buldak Ramen Picante",
+                짜짜로니: "Chapagetti",
+                
+                ttsBoilStart: "Iniciando la preparación. Coloque la olla con agua en la estufa y espere a que hierva.",
+                ttsNoodleTime: "¡El agua está hirviendo! Añada los fideos y la sopa en polvo con cuidado.",
+                ttsToppingTime: "Es el momento de añadir sus ingredientes seleccionados a la olla.",
+                ttsEggTime: "Introduzca el huevo ahora de forma suave para cocinarlo perfectamente.",
+                ttsDone: "¡El ramen está perfectamente cocinado! Apague el fuego y disfrute.",
+                ttsNextReady: "Listo para la siguiente fase. Presione el botón Comenzar para continuar."
+            },
+            de: {
+                title: "Smarter Ramen-Meister",
+                subtitle: "Ihr optimaler Rezept-Begleiter",
+                ramenSelect: "1. Ramen-Typ wählen",
+                stoveSelect: "2. Herd-Typ wählen",
+                toppings: "3. Toppings hinzufügen",
+                gas: "Gasherd",
+                gasDesc: "(Schnitt 4 Min.)",
+                induction: "Induktion",
+                inductionDesc: "(Schnitt 2.5 Min.)",
+                ricecake: "Reiskuchen (Mit Nudeln kochen)",
+                greenonion: "Frühlingszwiebeln (Letzte Min. hinzugeben)",
+                cheese: "Käse (Am Ende schmelzen)",
+                egg: "Ei hinzufügen",
+                eggSoft: "Weichgekocht (Letzte 1.5 Min.)",
+                eggHard: "Hartgekocht (Letzte 3 Min.)",
+                waterTitle: "Wasserempfehlung",
+                stepNode0: "Wasser kochen",
+                stepNode1: "Nudeln & Gewürz",
+                stepNode2: "Toppings",
+                stepNode3: "Guten Appetit",
+                start: "Starten",
+                pause: "Pause",
+                reset: "Zurücksetzen",
+                next: "Nächster Schritt",
+                ttsOn: "Sprachführung ist aktiviert.",
+                ttsOff: "Sprachführung ist deaktiviert.",
+                muteBtn: "Stumm",
+                unmuteBtn: "Ton an",
+                devTitle: "Entwickler",
+                devName: "Kim Byung-chan, Repräsentant des Valuable Future Education Research Institute",
+                waiting: "Warten - Wählen Sie Ramen",
+                initialDesc: "Ramen-Typ und Extras wählen, dann unten auf Start klicken.",
+                stepLabel: "Aktueller Schritt",
+                
+                shin: "Shin Ramyun",
+                jin: "Jin Ramyun",
+                neoguri: "Neoguri",
+                buldak: "Buldak",
+                짜짜로니: "Chapagetti",
+                
+                ttsBoilStart: "Kochvorgang gestartet. Bitte stellen Sie den Topf auf den Herd und warten Sie auf das Kochen.",
+                ttsNoodleTime: "Das Wasser kocht! Bitte geben Sie die Nudeln und das Suppenpulver vorsichtig hinein.",
+                ttsToppingTime: "Geben Sie jetzt Ihre ausgewählten Toppings vorsichtig in den Topf.",
+                ttsEggTime: "Fügen Sie nun das Ei vorsichtig hinzu, damit es perfekt gart.",
+                ttsDone: "Ihre Ramen sind fertig gekocht! Schalten Sie den Herd aus und genießen Sie das Essen!",
+                ttsNextReady: "Bereit für den nächsten Schritt. Drücken Sie Start, um den Timer fortzusetzen."
+            },
+            vi: {
+                title: "Chuyên Gia Mì Ăn Liền",
+                subtitle: "Trợ Lý Công Thức Nấu Ramen Hoàn Hảo",
+                ramenSelect: "1. Chọn Loại Mì Ramen",
+                stoveSelect: "2. Thiết Bị Nấu",
+                toppings: "3. Thêm Topping Tùy Chọn",
+                gas: "Bếp Ga",
+                gasDesc: "(Trung bình 4 phút)",
+                induction: "Bếp Từ",
+                inductionDesc: "(Trung bình 2.5 phút)",
+                ricecake: "Bánh Gạo (Nấu cùng với mì)",
+                greenonion: "Hành Lá (Cho vào trước 1 phút)",
+                cheese: "Phô Mai (Cho lên trên khi hoàn thành)",
+                egg: "Thêm Trứng",
+                eggSoft: "Lòng Đào (1.5 phút cuối)",
+                eggHard: "Chín Kỹ (3 phút cuối)",
+                waterTitle: "Lượng Nước Gợi Ý",
+                stepNode0: "Đun Sôi Nước",
+                stepNode1: "Mì & Gia Vị",
+                stepNode2: "Nấu Topping",
+                stepNode3: "Thưởng Thức thôi!",
+                start: "Bắt Đầu",
+                pause: "Tạm Dừng",
+                reset: "Đặt Lại",
+                next: "Chuyển sang bước tiếp theo",
+                ttsOn: "Đã bật hướng dẫn bằng giọng nói.",
+                ttsOff: "Đã tắt hướng dẫn bằng giọng nói.",
+                muteBtn: "Tắt tiếng",
+                unmuteBtn: "Bật tiếng",
+                devTitle: "Nhà phát triển",
+                devName: "Kim Byung-chan, Đại diện Viện Nghiên cứu Giáo dục Tương lai Giá trị",
+                waiting: "Đang chờ - Hãy chọn mì",
+                initialDesc: "Vui lòng chọn loại mì và các tùy chọn đi kèm, sau đó nhấn nút Bắt Đầu bên dưới.",
+                stepLabel: "Trạng thái hiện tại",
+                
+                shin: "Mì Shin Ramyun",
+                jin: "Mì Jin Ramyun",
+                neoguri: "Mì Neoguri",
+                buldak: "Mì cay Buldak",
+                짜짜로니: "Mì trộn Chapagetti",
+                
+                ttsBoilStart: "Bắt đầu nấu ăn. Hãy đặt nồi nước lên bếp và chờ nước sôi.",
+                ttsNoodleTime: "Nước đã sôi sùng sục! Hãy cho mì và gói gia vị vào một cách cẩn thận.",
+                ttsToppingTime: "Đã đến lúc thêm các topping bạn chọn vào nồi.",
+                ttsEggTime: "Hãy nhẹ nhàng thả trứng vào nồi để chín đều và đẹp mắt.",
+                ttsDone: "Mì Ramen đã chín hoàn hảo! Hãy tắt bếp và thưởng thức ngay món ăn tuyệt hảo này thôi!",
+                ttsNextReady: "Đã sẵn sàng cho bước tiếp theo. Nhấn nút Bắt Đầu để tiếp tục đếm ngược."
+            }
+        };
+
+        // Standard Ramen Database containing absolute optimal recipes
+        const ramens = [
+            { id: "shin", nameKey: "shin", water: 550, baseCookTime: 270, color: "from-red-600 to-red-800" },
+            { id: "jin", nameKey: "jin", water: 500, baseCookTime: 240, color: "from-yellow-500 to-amber-600" },
+            { id: "neoguri", nameKey: "neoguri", water: 550, baseCookTime: 300, color: "from-orange-600 to-red-900" },
+            { id: "buldak", nameKey: "buldak", water: 600, baseCookTime: 300, color: "from-gray-800 to-black" },
+            { id: "짜짜로니", nameKey: "짜짜로니", water: 600, baseCookTime: 300, color: "from-emerald-800 to-stone-900" }
+        ];
+
+        // State variables
+        let currentLang = 'ko';
+        let selectedRamen = ramens[0];
+        let selectedStove = 'gas'; // 'gas' or 'induction'
+        let toppings = {
+            ricecake: false,
+            greenonion: false,
+            cheese: false,
+            egg: false,
+            eggStyle: 'soft' // 'soft' or 'hard'
+        };
+
+        // Step Controller Configuration
+        // Step 0: Boil Water
+        // Step 1: Cook Noodles
+        // Step 2: Add Toppings / Eggs (Interactive dynamically customized timer)
+        // Step 3: Serve & Done
+        let currentStep = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        let timeRemaining = 0;
+        let isAudioMuted = false;
+
+        // Dynamic step configuration arrays based on configurations
+        let stepsTimeline = [];
+
+        // Setup Application on Window Load
+        window.onload = function () {
+            buildRamenUI();
+            setStove('gas');
+            changeLanguage('ko');
+            resetTimelineToDefault();
+
+            document.getElementById('lang-select').addEventListener('change', (e) => {
+                changeLanguage(e.target.value);
+            });
+        };
+
+        function buildRamenUI() {
+            const grid = document.getElementById('ramen-grid');
+            grid.innerHTML = '';
+            ramens.forEach(ramen => {
+                const btn = document.createElement('button');
+                btn.id = `btn-ramen-${ramen.id}`;
+                btn.className = `p-4 border-2 border-orange-100 rounded-xl font-bold flex flex-col items-center justify-center bg-white text-center hover:border-red-500 transition-all shadow-sm`;
+                btn.onclick = () => selectRamen(ramen.id);
+                btn.innerHTML = `
+                    <span class="w-10 h-10 rounded-full bg-gradient-to-br ${ramen.color} text-white flex items-center justify-center font-mono text-xs mb-2">R</span>
+                    <span class="text-sm font-extrabold" data-translate-key="${ramen.nameKey}">${translations[currentLang][ramen.nameKey]}</span>
+                    <span class="text-xs text-gray-400 mt-1">${ramen.water}ml / ${Math.floor(ramen.baseCookTime / 60)}m ${ramen.baseCookTime % 60}s</span>
+                `;
+                grid.appendChild(btn);
+            });
+            selectRamen(selectedRamen.id);
+        }
+
+        // Action when user clicks/selects a Ramen type
+        function selectRamen(id) {
+            selectedRamen = ramens.find(r => r.id === id);
+            
+            // UI visual update
+            ramens.forEach(r => {
+                const b = document.getElementById(`btn-ramen-${r.id}`);
+                if (r.id === id) {
+                    b.classList.remove('border-orange-100');
+                    b.classList.add('border-red-500', 'bg-red-50/10');
+                } else {
+                    b.classList.remove('border-red-500', 'bg-red-50/10');
+                    b.classList.add('border-orange-100');
+                }
+            });
+
+            // Update badge & title
+            document.getElementById('badge-ramen-name').innerText = translations[currentLang][selectedRamen.nameKey];
+            document.getElementById('water-volume').innerText = `${selectedRamen.water} ml`;
+            updateDynamicRecipeTitle();
+            resetTimer();
+        }
+
+        function setStove(type) {
+            selectedStove = type;
+            const btnGas = document.getElementById('btn-stove-gas');
+            const btnInd = document.getElementById('btn-stove-induction');
+
+            if (type === 'gas') {
+                btnGas.classList.add('border-red-500', 'bg-red-50/20');
+                btnInd.classList.remove('border-red-500', 'bg-red-50/20');
+            } else {
+                btnInd.classList.add('border-red-500', 'bg-red-50/20');
+                btnGas.classList.remove('border-red-500', 'bg-red-50/20');
+            }
+            resetTimer();
+        }
+
+        function toggleEggOption() {
+            const hasEgg = document.getElementById('top-egg').checked;
+            const panel = document.getElementById('egg-option-panel');
+            if (hasEgg) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+            updateToppings();
+        }
+
+        function updateToppings() {
+            toppings.ricecake = document.getElementById('top-ricecake').checked;
+            toppings.greenonion = document.getElementById('top-greenonion').checked;
+            toppings.cheese = document.getElementById('top-cheese').checked;
+            toppings.egg = document.getElementById('top-egg').checked;
+            resetTimer();
+        }
+
+        function updateEggStyle() {
+            const radios = document.getElementsByName('egg-style');
+            for (const radio of radios) {
+                if (radio.checked) {
+                    toppings.eggStyle = radio.value;
+                    break;
+                }
+            }
+            resetTimer();
+        }
+
+        // Build precise cooking timeline based on inputs
+        function constructTimeline() {
+            const timeline = [];
+
+            // 1. Water Boiling Step (Vary depending on gas vs induction)
+            const boilDuration = (selectedStove === 'gas') ? 240 : 150; // Gas: 4m, Induction: 2.5m
+            timeline.push({
+                step: 0,
+                name: translations[currentLang].stepNode0,
+                duration: boilDuration,
+                speechText: translations[currentLang].ttsBoilStart,
+                actionDesc: translations[currentLang].ttsBoilStart
+            });
+
+            // Calculate Ramen cooking divisions
+            // Basic Ramen Boil is divided into 'Noodle Cook' and 'Topping Finisher'
+            const ramenTotalCook = selectedRamen.baseCookTime;
+            
+            // Topping/Egg finish time logic
+            let toppingTime = 60; // default 1 min
+            let toppingSpeech = translations[currentLang].ttsToppingTime;
+
+            if (toppings.egg) {
+                if (toppings.eggStyle === 'soft') {
+                    toppingTime = 90; // egg & details added 1.5 min before end
+                    toppingSpeech = translations[currentLang].ttsEggTime;
+                } else {
+                    toppingTime = 180; // egg added 3 mins before end (if cooking time permits)
+                    if (ramenTotalCook <= 180) toppingTime = 120;
+                    toppingSpeech = translations[currentLang].ttsEggTime;
+                }
+            }
+
+            const mainNoodleTime = ramenTotalCook - toppingTime;
+
+            // 2. Add Noodle & Soup Step
+            timeline.push({
+                step: 1,
+                name: translations[currentLang].stepNode1,
+                duration: mainNoodleTime,
+                speechText: translations[currentLang].ttsNoodleTime,
+                actionDesc: translations[currentLang].ttsNoodleTime
+            });
+
+            // 3. Add Custom Toppings Step
+            timeline.push({
+                step: 2,
+                name: translations[currentLang].stepNode2,
+                duration: toppingTime,
+                speechText: toppingSpeech,
+                actionDesc: toppingSpeech
+            });
+
+            // 4. Finished Serving Step
+            timeline.push({
+                step: 3,
+                name: translations[currentLang].stepNode3,
+                duration: 0,
+                speechText: translations[currentLang].ttsDone,
+                actionDesc: translations[currentLang].ttsDone
+            });
+
+            return timeline;
+        }
+
+        function resetTimelineToDefault() {
+            stepsTimeline = constructTimeline();
+            currentStep = 0;
+            timeRemaining = stepsTimeline[currentStep].duration;
+            updateUIForStep();
+        }
+
+        // UI rendering updates
+        function updateUIForStep() {
+            // Update node steps styling
+            for (let s = 0; s < 4; s++) {
+                const node = document.getElementById(`step-node-${s}`);
+                if (s === currentStep) {
+                    node.className = "p-2 border-2 border-red-500 rounded-lg text-xs font-bold transition-all bg-red-50 scale-105 shadow-sm text-red-700";
+                } else if (s < currentStep) {
+                    node.className = "p-2 border border-green-200 rounded-lg text-xs font-bold transition-all bg-green-50 text-green-700";
+                } else {
+                    node.className = "p-2 border border-gray-200 rounded-lg text-xs font-bold transition-all bg-white text-gray-400";
+                }
+            }
+
+            // Current text elements
+            const activeStepData = stepsTimeline[currentStep];
+            document.getElementById('timer-step-name').innerText = activeStepData.name;
+            document.getElementById('step-action-desc').innerText = activeStepData.actionDesc;
+            updateClockFace();
+        }
+
+        function updateClockFace() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            document.getElementById('clock-display').innerText = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateDynamicRecipeTitle() {
+            const t = translations[currentLang];
+            const name = t[selectedRamen.nameKey];
+            document.getElementById('recipe-title').innerText = `${name} - ${t.title}`;
+        }
+
+        // Timer Operations
+        function startTimer() {
+            if (isRunning) return;
+            
+            // Speak Step speech if just starting the step from fresh
+            const stepData = stepsTimeline[currentStep];
+            if (timeRemaining === stepData.duration && stepData.duration > 0) {
+                speak(stepData.speechText);
+            }
+
+            isRunning = true;
+            document.getElementById('btn-start').classList.add('opacity-50', 'pointer-events-none');
+            
+            timerInterval = setInterval(() => {
+                if (timeRemaining > 0) {
+                    timeRemaining--;
+                    updateClockFace();
+                } else {
+                    // Current step completed
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    document.getElementById('btn-start').classList.remove('opacity-50', 'pointer-events-none');
+                    triggerAlarm();
+                    
+                    // Move to next step if possible, but DO NOT auto-start. Require 'Start' click.
+                    if (currentStep < stepsTimeline.length - 1) {
+                        currentStep++;
+                        timeRemaining = stepsTimeline[currentStep].duration;
+                        updateUIForStep();
+                        
+                        // Speak notification to press start
+                        setTimeout(() => {
+                            speak(translations[currentLang].ttsNextReady);
+                        }, 1000);
+                    }
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            if (!isRunning) return;
+            clearInterval(timerInterval);
+            isRunning = false;
+            document.getElementById('btn-start').classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            resetTimelineToDefault();
+            document.getElementById('btn-start').classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        function nextStep() {
+            // Jump manually to next step
+            clearInterval(timerInterval);
+            isRunning = false;
+            document.getElementById('btn-start').classList.remove('opacity-50', 'pointer-events-none');
+            
+            if (currentStep < stepsTimeline.length - 1) {
+                currentStep++;
+                timeRemaining = stepsTimeline[currentStep].duration;
+                updateUIForStep();
+                speak(translations[currentLang].ttsNextReady);
+            } else {
+                // If already at end or done, wrap around
+                resetTimer();
+            }
+        }
+
+        function triggerAlarm() {
+            const audio = document.getElementById('alarm-sound');
+            if (audio) {
+                audio.play().catch(e => console.log("Alarm sound blocked by browser autoplay policy. Waiting for user interaction."));
+            }
+        }
+
+        function toggleAudio() {
+            isAudioMuted = !isAudioMuted;
+            const btn = document.getElementById('btn-audio-mute');
+            const lblStatus = document.getElementById('lbl-tts-status');
+            const lblBtn = document.getElementById('lbl-audio-btn');
+
+            if (isAudioMuted) {
+                btn.innerHTML = `<i class="fa-solid fa-volume-high text-green-500"></i> <span id="lbl-audio-btn">${translations[currentLang].unmuteBtn}</span>`;
+                lblStatus.innerText = translations[currentLang].ttsOff;
+                window.speechSynthesis.cancel();
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-volume-xmark text-red-500"></i> <span id="lbl-audio-btn">${translations[currentLang].muteBtn}</span>`;
+                lblStatus.innerText = translations[currentLang].ttsOn;
+            }
+        }
+
+        // Smart TTS engine with language assignment and clean emoji removal
+        function speak(text) {
+            if (isAudioMuted) return;
+
+            // Stop any ongoing spoken segments to avoid backlog
+            window.speechSynthesis.cancel();
+
+            // Emoji-cleaner regex block to prevent weird voice interpretations
+            const cleanText = text.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            
+            // Map our custom selector to standard Web Speech API locale formats
+            const langMap = {
+                'ko': 'ko-KR',
+                'en': 'en-US',
+                'ja': 'ja-JP',
+                'zh': 'zh-CN',
+                'es': 'es-ES',
+                'de': 'de-DE',
+                'vi': 'vi-VN'
+            };
+
+            utterance.lang = langMap[currentLang] || 'ko-KR';
+            
+            // Choose the best suited voice matching target language
+            const voices = window.speechSynthesis.getVoices();
+            const voice = voices.find(v => v.lang.startsWith(utterance.lang));
+            if (voice) {
+                utterance.voice = voice;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Multi-Language Translation Engine
+        function changeLanguage(langCode) {
+            currentLang = langCode;
+            const dict = translations[langCode];
+
+            // Core UI translations
+            document.getElementById('header-title').innerText = dict.title;
+            document.getElementById('header-subtitle').innerText = dict.subtitle;
+            document.getElementById('lbl-ramen-select').innerText = dict.ramenSelect;
+            document.getElementById('lbl-stove-select').innerText = dict.stoveSelect;
+            document.getElementById('lbl-toppings').innerText = dict.toppings;
+            document.getElementById('lbl-gas').innerText = dict.gas;
+            document.getElementById('lbl-gas-desc').innerText = dict.gasDesc;
+            document.getElementById('lbl-induction').innerText = dict.induction;
+            document.getElementById('lbl-induction-desc').innerText = dict.inductionDesc;
+            
+            document.getElementById('lbl-topping-ricecake').innerText = dict.ricecake;
+            document.getElementById('lbl-topping-greenonion').innerText = dict.greenonion;
+            document.getElementById('lbl-topping-cheese').innerText = dict.cheese;
+            document.getElementById('lbl-topping-egg').innerText = dict.egg;
+            document.getElementById('lbl-egg-soft').innerText = dict.eggSoft;
+            document.getElementById('lbl-egg-hard').innerText = dict.eggHard;
+
+            document.getElementById('lbl-water-amount-title').innerText = dict.waterTitle;
+            document.getElementById('lbl-step-node-0').innerText = dict.stepNode0;
+            document.getElementById('lbl-step-node-1').innerText = dict.stepNode1;
+            document.getElementById('lbl-step-node-2').innerText = dict.stepNode2;
+            document.getElementById('lbl-step-node-3').innerText = dict.stepNode3;
+
+            document.getElementById('lbl-btn-start').innerText = dict.start;
+            document.getElementById('lbl-btn-pause').innerText = dict.pause;
+            document.getElementById('lbl-btn-reset').innerText = dict.reset;
+            document.getElementById('lbl-btn-next').innerText = dict.next;
+
+            document.getElementById('lbl-dev-title').innerText = `${dict.devTitle}:`;
+            document.getElementById('lbl-tts-status').innerText = isAudioMuted ? dict.ttsOff : dict.ttsOn;
+            document.getElementById('lbl-audio-btn').innerText = isAudioMuted ? dict.unmuteBtn : dict.muteBtn;
+
+            // Badge Update
+            document.getElementById('badge-ramen-name').innerText = dict[selectedRamen.nameKey];
+
+            // Rebuild Ramen selection elements to translate their names
+            buildRamenUI();
+
+            // Refresh Dynamic timeline names
+            resetTimer();
+        }
+    </script>
+</body>
+</html>
